@@ -41,5 +41,5 @@ model
   # Single TTR model
 %s
 
-  # data # n, nt, ne, traits, NH4, P, K, SALINITY, SILT, PH, URP, HH, ns, species
+  # data # n, nt, ne, traits, NH4, P, K, SALINITY, SILT, PH, URP, HH, ns, species, ttrI
 }
