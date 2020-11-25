@@ -17,15 +17,20 @@ library(vegan)
 
 # CHECK INPUTS -----------------
 args = commandArgs(trailingOnly=TRUE)
+if (exists("choice"))
+  args <- choice
+
 if (length(args) > 0)
 {
-  run_dic <- TRUE
+  if (!exists("run_dic"))
+    run_dic <- TRUE
   if (any(args == "--run_dic"))
     run_dic <- TRUE
   if (any(args == "--no_dic"))
     run_dic <- FALSE
 
-  use_wish <- TRUE
+  if (!exists("use_wish"))
+    use_wish <- TRUE
   if (any(args == "--use_wish"))
     use_wish <- TRUE
   if (any(args == "--no_wish"))
@@ -173,6 +178,7 @@ if ((length(args) == 0) && (exists("model")))
 if (length(args) > 0)
 {
   print(paste("I'm going to run", length(args), "model(s)."))
+  print(paste("I", (if (run_dic) "will" else "won't"), "run DIC."))
   for (arg in args)
   {
     model.num <- as.integer(arg)
@@ -187,6 +193,10 @@ if (length(args) > 0)
       # DIC
       dic <- extract(extend, what='dic') # DIC, pD
       print(dic)
+      write.csv(data.frame(model=arg,
+                           name=names(models)[model.num],
+                           dic=sum(dic$deviance+dic$penalty)),
+                paste0(arg, ".csv"))
     }
     s <- add.summary(extend)
   }
