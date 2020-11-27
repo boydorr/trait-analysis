@@ -82,7 +82,7 @@ if (use_wish)
   ttr.0 <- c("ttr.wish.one", "ttr.wish.onev")
   ttr.models <- c("ttr.wish.species", "ttr.wish.speciesv") #, "ttr.wish.species.mean")
 } else {
-  ttr.0 <- "ttr.one"
+  ttr.0 <- c("ttr.diag", "ttr.one")
   ttr.models <- c("ttr.species", "ttr.species.mean", "ttr.species.mean.t")
 }
 
