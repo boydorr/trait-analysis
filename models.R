@@ -1,11 +1,11 @@
-####  LIBRARY IMPORT  ####
+##  LIBRARY IMPORT --------------
 library(rJava)
-library(rjags) # install.packages(pkgs = c("rjags","coda", "runjags"),repos = "http://cran.fhcrc.org/")
+library(rjags)
 library(runjags)
 library(coda)
 library(mcmcplots)
 library(sqldf)
-library(XLConnect) # install.packages("XLConnect", dependencies=TRUE) to avoid xlxs issue
+library(XLConnect)
 library(dplyr)
 library(data.table)
 library(ggplot2)
@@ -15,13 +15,18 @@ library(scales)
 library(grid)
 library(vegan)
 
-# CHECK INPUTS -----------------
+## CHECK INPUTS -----------------
+## You can run this script at the command line with arguments
 args = commandArgs(trailingOnly=TRUE)
+## Or you can set the arguments manually in the choice variable
+## (and the model variable - see below)
 if (exists("choice"))
   args <- choice
 
 if (length(args) > 0)
 {
+  ## setting run_dic variable will set the default (otherwise TRUE)
+  ## the argument --run_dic / --no_dic will calculate DIC or not
   if (!exists("run_dic"))
     run_dic <- TRUE
   if (any(args == "--run_dic"))
@@ -29,6 +34,8 @@ if (length(args) > 0)
   if (any(args == "--no_dic"))
     run_dic <- FALSE
 
+  ## setting use_wish variable will set the default (otherwise TRUE)
+  ## the argument --use_wish / --no_wish will use Wishart priors or not
   if (!exists("use_wish"))
     use_wish <- TRUE
   if (any(args == "--use_wish"))
@@ -36,6 +43,7 @@ if (length(args) > 0)
   if (any(args == "--no_wish"))
     use_wish <- FALSE
 
+  ## Normalise variables to mean 0, sd 1 or mean 500, sd 100
   norm_mean <- 0
   norm_sd   <- 1
   if (any(args == "--mean_0"))
@@ -62,7 +70,15 @@ if (length(args) > 0)
   }
 }
 
-####  DATA IMPORT  ####
+# Do we want to do something specific? Or test everything?
+## Models to run should either be in the argument list or in a variable
+## called model. If neither are supplied run all models v briefly to
+## check functionality
+if ((length(args) == 0) && (exists("model")))
+  args <- as.character(model)
+
+
+##  DATA IMPORT FUNCTION -------------
 read.file <- function(basefile, terroot, ttrroot)
 {
   terfile <- paste0(terroot, ".R")
@@ -73,7 +89,7 @@ read.file <- function(basefile, terroot, ttrroot)
   sprintf(base, ter, ttr)
 }
 
-# NAME MODELS ---------------
+## NAME MODELS ---------------
 ter.0 <- "ter.one"
 ter.models <- c("ter.species", "ter.species.mean", "ter.species.mean.e",
                 "ter.species.mean.t", "ter.species.mean.et")
@@ -86,7 +102,7 @@ if (use_wish)
   ttr.models <- c("ttr.species", "ttr.species.mean", "ttr.species.mean.t")
 }
 
-# BUILD MODELS ----------------
+## BUILD MODELS ----------------
 models<- list()
 # Null model
 for (ttr in ttr.0)
@@ -106,10 +122,10 @@ for (ter in ter.models)
   for (ttr in ttr.models)
     models[[paste(ter, ttr, sep="_")]] <- read.file("base.ter.ttr.R", ter, ttr)
 
-# CREATING NEW DATABASE -------------
+## CREATING NEW DATABASE -------------
 db <- dbConnect(SQLite())
 
-# IMPORTING EXCEL DATA ---------------
+## IMPORTING EXCEL DATA ---------------
 wb <- loadWorkbook("data.xlsx")
 setMissingValue(wb, value = "NA")
 
@@ -119,7 +135,7 @@ names(Tables) <- c("PLOT", "SPECIES", "TRAIT")    # Change the names of the data
 str(Tables)      # structure of Tables
 names(Tables)    # Names of the elements of Tables
 
-# INSERTING TABLES INTO DATABASE ---------------
+## INSERTING TABLES INTO DATABASE ---------------
 with(Tables, {
   dbWriteTable(conn = db, name = "PLOT",    value = PLOT,
                row.names = FALSE, overwrite = TRUE)
@@ -129,7 +145,7 @@ with(Tables, {
                row.names = FALSE, overwrite = TRUE)
 })
 
-## individual species plot wise ----------------
+## INDIVIDUAL SPECIES PLOT WISE ----------------
 tree <- dbGetQuery(db,"SELECT PLOT_TRAIT, TRAIT.SPECIES_TRAIT, PLOT.NH4, PLOT.P,
                        PLOT.K, PLOT.SALINITY, PLOT.SILT, PLOT.PH, PLOT.URP,
                        PLOT.HH, TRAIT.HEIGHT, TRAIT.SLA, TRAIT.WD, TRAIT.SC
@@ -170,11 +186,8 @@ envir <- as.matrix(cbind(NH4, P, K, SALINITY, SILT, PH, URP, HH)) * norm_sd +
   norm_mean
 ne <- ncol(envir) + 1
 
-# RUN MODELS IN JAGS -----------------
-# Do we want to do something specific? Or test everything?
-if ((length(args) == 0) && (exists("model")))
-  args <- as.character(model)
-
+## RUN MODELS IN JAGS -----------------
+## All remaining arguments are numbers of models to run
 if (length(args) > 0)
 {
   print(paste("I'm going to run", length(args), "model(s)."))
@@ -200,7 +213,7 @@ if (length(args) > 0)
     }
     s <- add.summary(extend)
   }
-} else {
+} else { ## If no model specified run all very briefly to check they work
   print("Testing all models!")
   for (name in names(models))
   {
